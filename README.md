@@ -1,6 +1,6 @@
-# Twilio Verify with Retry Logic
+# Twilio Verify Time-based One-time passwords (TOTP)
 
-This demo of the [Twilio Verify API](https://www.twilio.com/docs/verify/api) includes best practices for SMS verification retry logic with Voice fallback and landline detection.
+This demo of the [Twilio Verify API](https://www.twilio.com/docs/verify/api) includes the TOTP factor type
 
 ## Pre-requisites
 
@@ -20,19 +20,20 @@ In your `.env` file, set the following values:
 
 ### Function Parameters
 
-`start-verify.js` expects the following parameters:
+`create-factor.js` expects the following parameters:
 
 | Parameter      | Description                                 | Required |
 | :------------- | :------------------------------------------ | :------- |
-| `to`           | Either an email or phone number in [E.164 format](https://www.twilio.com/docs/glossary/what-e164) | Yes |
-| `channel`      | 'sms' or 'call'. Default is 'sms'           | No |
+| `name`         | An identifier that is used in the authenticator app account name. | Yes |
 
-`check-verify.js` expects the following parameters:
+`check-token.js` expects the following parameters:
 
 | Parameter           | Description                | Required |
 | :------------------ | :------------------------- | :------- |
-| `to`                | Either an email or phone number in [E.164 format](https://www.twilio.com/docs/glossary/what-e164) | Yes |
-| `code`              | Collected from user input  | Yes      |
+| `identity`          | Unique identity UUID. Returned from `create-factor` function. | Yes |
+| `factorSid`         | Starts with `YF`. Returned from `create-factor` function. | Yes |
+| `code`              | Collected from user input. | Yes |
+
 
 ## Create a new project with the template
 
@@ -72,4 +73,3 @@ With the [Twilio CLI](https://www.twilio.com/docs/twilio-cli/quickstart):
 ```
 twilio serverless:deploy
 ```
-
