@@ -40,7 +40,7 @@ async function checkCode(entity, factorSid, code) {
     console.log(status);
     throw new VerificationException(
       401,
-      `Incorrect token. Wait ${factor.config.time_step} seconds and try again.`
+      `Incorrect token. Check your authenticator app (or wait for the token to refresh) and try again.`
     );
   }
 }
