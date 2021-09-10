@@ -12,7 +12,6 @@ const { detectMissingParams, VerificationException } = require(assets[
 
 async function checkCode(entity, factorSid, code) {
   const factor = await entity.factors(factorSid).fetch();
-  console.log(factor);
   let status;
 
   if (factor.status !== "verified") {
