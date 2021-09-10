@@ -47,7 +47,7 @@ twilio plugins:install @twilio-labs/plugin-serverless
 3. Initiate a new project
 
 ```
-twilio serverless:init verify-retry-sample --template=verify-retry && cd verify-retry-sample
+twilio serverless:init totp-sample-app --template=verify-totp && cd totp-sample-app
 ```
 
 4. Add your environment variables to `.env`:
