@@ -1,17 +1,7 @@
 /**
- *  Check Verification
- *
- *  This Function shows you how to check a verification token for Twilio Verify.
- *
- *  Pre-requisites
- *  - Create a Verify Service (https://www.twilio.com/console/verify/services)
- *  - Add VERIFY_SERVICE_SID from above to your Environment Variables (https://www.twilio.com/console/functions/configure)
- *  - Enable ACCOUNT_SID and AUTH_TOKEN in your functions configuration (https://www.twilio.com/console/functions/configure)
- *
- *
  *  Returns JSON:
  *  {
- *    "success": boolean,
+ *    "ok": boolean,
  *    "message": string
  *  }
  */
@@ -22,6 +12,7 @@ const { detectMissingParams, VerificationException } = require(assets[
 
 async function checkCode(entity, factorSid, code) {
   const factor = await entity.factors(factorSid).fetch();
+  console.log(factor);
   let status;
 
   if (factor.status !== "verified") {
@@ -37,7 +28,6 @@ async function checkCode(entity, factorSid, code) {
       authPayload: code,
       factorSid,
     });
-
     status = challenge.status;
   }
 
@@ -47,7 +37,11 @@ async function checkCode(entity, factorSid, code) {
     return "Factor verified.";
     // eslint-disable-next-line no-else-return
   } else {
-    throw new VerificationException(401, "Incorrect token.");
+    console.log(status);
+    throw new VerificationException(
+      401,
+      `Incorrect token. Wait ${factor.config.time_step} seconds and try again.`
+    );
   }
 }
 

@@ -37,6 +37,20 @@
         border-radius: 4px;
       }
 
+      .explainer {
+        color: #0c5460;
+        background-color: #d1ecf1;
+        border-color: #bee5eb;
+        padding: 0.75rem 1.25rem;
+        margin-top: 1rem;
+        border: 1px solid transparent;
+        border-radius: 0.25rem;
+      }
+
+      .reset {
+        margin-top: 1rem;
+      }
+
       #secret {
         font-weight: bold;
         text-transform: uppercase;
@@ -99,7 +113,9 @@
             third-party authenticator app like
             <a href="https://authy.com/download/">Authy</a> or Google
             Authenticator using the
-            <a href="https://www.twilio.com/docs/glossary/totp">TOTP</a>
+            <a href="https://www.twilio.com/docs/glossary/totp"
+              >time-based one-time password (TOTP)</a
+            >
             standard.
           </p>
           <hr />
@@ -110,6 +126,11 @@
             <div>
               <input type="text" id="name" class="form-control" required />
               <input type="submit" value="Set up two-factor authentication" />
+            </div>
+          </form>
+          <form id="start-challenge" style="display: none">
+            <div>
+              <input type="submit" value="Validate authenticator app token" />
             </div>
           </form>
           <div>
@@ -129,22 +150,15 @@
               >
             </div>
             <div>
-              <input type="text" id="code" placeholder="123 456" required />
+              <input type="text" id="code" placeholder="456789" required />
               <input type="submit" value="Verify" />
             </div>
           </form>
-          <div>
-            <span id="reset"
-              ><a href="#" onclick="window.location.reload(false);"
-                >Reset</a
-              ></span
-            >
-          </div>
         </section>
         <section>
-          <div>
-            <h4 id="explainer-title">What's happening here...</h4>
-            <p class="explainer" id="ex-new-factor">
+          <div class="explainer" id="ex-new-factor">
+            <h4>What's happening here:</h4>
+            <p>
               The API is
               <strong
                 >creating a new TOTP
@@ -154,20 +168,52 @@
                 ></strong
               >
               when you click "Set up two-factor authentication". This is how the
-              Verify API tracks a user (
+              Verify API connects a user (
               <code>identity</code>
-              ). Each Factor has a unique Factor SID and returns the secret key
-              and URI used to create the QR code.
+              ), the
+              <a href="https://www.twilio.com/docs/glossary/totp"
+                >TOTP channel</a
+              >, and your app. Each Factor returns the secret seed and URI used
+              to create a QR code.
             </p>
-            <p class="explainer" id="ex-verify-factor">
+          </div>
+          <div class="explainer" id="ex-verify-factor">
+            <h4>What's happening here:</h4>
+            <p>
               Before you can use this channel for ongoing authentication, the
               user must <strong>verify the Factor</strong> to ensure that setup
-              was successful. Unverified Factors will be deleted between 1 and
-              24 hours after being created.
+              was successful.
             </p>
-            <p class="explainer" id="ex-ongoing-auth">
-              <strong>Use for ongoing authentication</strong>.
+            <p>
+              After sharing the seed via a QR code or secret key,
+              <a href="https://www.twilio.com/docs/glossary/totp"
+                >this authentication channel is available offline.</a
+              >
             </p>
+            <p>
+              Note: unverified Factors will be deleted between 1 and 24 hours
+              after being created.
+            </p>
+          </div>
+          <div class="explainer" id="ex-ongoing-auth">
+            <h4>What's happening here:</h4>
+            <p>
+              After the Factor has been verified you can collect a token from
+              the user at any time for <strong>ongoing authentication</strong>.
+              On the backend, this will
+              <a
+                href="https://www.twilio.com/docs/verify/api/challenge?code-sample=code-create-totp-challenge-with-authpayload&code-language=Node.js&code-sdk-version=3.x"
+                >create a challenge</a
+              >
+              with the token provided.
+            </p>
+          </div>
+        </section>
+        <section>
+          <div class="reset">
+            <span>
+              <a href="#" onclick="window.location.reload(false);">Reset</a>
+            </span>
           </div>
         </section>
       </div>
@@ -184,7 +230,6 @@
     }
 
     function hideExplainers() {
-      document.getElementById("explainer-title").style.display = "none";
       Array.from(document.getElementsByClassName("explainer")).forEach(
         (explainer) => {
           explainer.style.display = "none";
@@ -194,8 +239,8 @@
 
     function showExplainer(name) {
       hideExplainers();
-      document.getElementById("explainer-title").style.display = "block";
-      document.getElementById(name).style.display = "block";
+      const explainer = document.getElementById(name);
+      explainer.style.display = "block";
     }
 
     function showStatus(message, color = "gray") {
@@ -293,10 +338,9 @@
             document.getElementById("otp").style.display = "none";
             document.getElementById("factor-setup").style.display = "none";
             showStatus(json.message, (color = "#3c763d"));
+            document.getElementById("start-challenge").style.display = "flex";
           } else {
-            showError(
-              `${json.message}. Check the code generated in your authenticator app.`
-            );
+            showError(json.message);
           }
           document.getElementById("code").value = "";
         })
@@ -305,11 +349,22 @@
         });
     }
 
+    function startChallenge(event) {
+      event.preventDefault();
+      document.getElementById("start-challenge").style.display = "none";
+      clearStatus();
+      showExplainer("ex-ongoing-auth");
+      showOtpForm();
+    }
+
     showExplainer("ex-new-factor");
 
     document
       .getElementById("create-factor")
       .addEventListener("submit", createFactor);
+    document
+      .getElementById("start-challenge")
+      .addEventListener("submit", startChallenge);
     document.getElementById("otp").addEventListener("submit", validateToken);
   </script>
 </html>

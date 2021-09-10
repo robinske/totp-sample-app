@@ -1,5 +1,3 @@
-const crypto = require("crypto");
-
 class VerificationException extends Error {
   constructor(status, message) {
     super(`Error ${status}: ${message}`);
