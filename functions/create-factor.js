@@ -3,9 +3,12 @@ const { v4: uuidv4 } = require("uuid");
 /**
  *  Returns JSON
  *  {
- *    "ok":       boolean,
- *    "uri":      string,  // not present if ok is false
- *    "message":  string
+ *    "ok":        boolean,
+ *    "message":   string,
+ *    "factorSid": string,  // not present if ok is false
+ *    "identity":  string,  // not present if ok is false
+ *    "uri:        string,  // not present if ok is false
+ *    "secret":    string,  // not present if ok is false
  *  }
  */
 const assets = Runtime.getAssets();
