@@ -173,7 +173,7 @@
         </section>
         <section>
           <div class="explainer" id="ex-new-factor">
-            <h4>What's happening here:</h4>
+            <h4>Create a New Factor | What's happening here:</h4>
             <p>
               The API is
               <strong
@@ -198,7 +198,7 @@
             </p>
           </div>
           <div class="explainer" id="ex-verify-factor">
-            <h4>What's happening here:</h4>
+            <h4>Verify a Factor | What's happening here:</h4>
             <p>
               Before you can use this channel for ongoing authentication, the
               user must <strong>verify the Factor</strong> to ensure that setup
@@ -216,7 +216,7 @@
             </p>
           </div>
           <div class="explainer" id="ex-backup-codes">
-            <h4>What's happening here:</h4>
+            <h4>Backup Codes | What's happening here:</h4>
             <p>
               Backup codes are commonly used as an
               <strong>account recovery factor</strong> in combination with TOTP.
@@ -237,7 +237,7 @@
             </p>
           </div>
           <div class="explainer" id="ex-ongoing-auth">
-            <h4>What's happening here:</h4>
+            <h4>Ongoing Authentication | What's happening here:</h4>
             <p>
               After the Factor has been verified you can collect a token from
               the user at any time for <strong>ongoing authentication</strong>.
@@ -265,13 +265,7 @@
     </footer>
   </body>
   <script>
-    function showError(error) {
-      console.error(error);
-      showStatus(error, (color = "#a94442"));
-    }
-
     function hide(element) {
-      // TODO let this work for element ids too
       element.style.display = "none";
     }
 
@@ -288,13 +282,23 @@
       document.getElementById(name).style.display = "block";
     }
 
+    function clearStatus() {
+      hideExplainers();
+      hide(document.getElementById("backup"));
+      document.getElementById("status").textContent = "";
+    }
+
     function showStatus(message, color = "gray") {
+      clearStatus();
       let status = document.getElementById("status");
       status.style.color = color;
       status.textContent = message;
     }
 
-    var otpFetchUrl;
+    function showError(error) {
+      console.error(error);
+      showStatus(error, (color = "#a94442"));
+    }
 
     function showQRCode(uri, secret) {
       document.getElementById("factor-setup").style.display = "flex";
@@ -321,6 +325,7 @@
     }
 
     function showBackupCodes(backupCodes) {
+      showExplainer("ex-backup-codes");
       document.getElementById("backup").style.display = "block";
       const codeList = document.getElementById("backup-codes");
       backupCodes.forEach((code) => {
@@ -347,7 +352,6 @@
       })
         .then((response) => {
           if (response.status >= 400) {
-            clearStatus();
             hideOtpForm();
             document.getElementById("create-factor").style.display = "flex";
 
@@ -376,15 +380,8 @@
         });
     }
 
-    function clearStatus() {
-      hideExplainers();
-      hide(document.getElementById("backup"));
-      document.getElementById("status").textContent = "";
-    }
-
     function parseTokenData() {
       event.preventDefault();
-      clearStatus();
       const code = document.getElementById("code").value;
       showStatus(`Checking code ${code}...`);
 
@@ -407,7 +404,6 @@
         })
         .then((json) => {
           if (json.ok) {
-            clearStatus();
             showStatus(json.message, (color = "#3c763d"));
 
             hideOtpForm();
