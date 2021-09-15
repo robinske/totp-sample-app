@@ -2,7 +2,8 @@
  *  Returns JSON:
  *  {
  *    "ok": boolean,
- *    "message": string
+ *    "message": string,
+ *    "backupCodes": array[string] // not present if ok is false
  *  }
  */
 const assets = Runtime.getAssets();
@@ -10,13 +11,30 @@ const { detectMissingParams, VerificationException } = require(assets[
   "/utils.js"
 ].path);
 
-async function checkToken(entity, factorSid, code) {
-  const challenge = await entity.challenges.create({
-    authPayload: code,
-    factorSid,
-  });
-  if (challenge.status === "approved") {
-    return "Verification success.";
+function generateBackupCodes() {
+  // PLACEHOLDER DO NOT USE IN PRODUCTION
+  const backupCodes = [
+    "6163346800",
+    "7479147371",
+    "5763599513",
+    "8649766853",
+    "7318661590",
+    "7695509658",
+    "3491963491",
+    "6257351652",
+    "9886113044",
+    "1688079534",
+  ];
+
+  return backupCodes;
+}
+
+async function verifyFactor(entity, factorSid, code) {
+  const factor = await entity.factors(factorSid).update({ authPayload: code });
+
+  if (factor.status === "verified") {
+    return "Factor verified.";
+    // eslint-disable-next-line no-else-return
   } else {
     throw new VerificationException(
       401,
@@ -53,11 +71,13 @@ exports.handler = async function (context, event, callback) {
     const { identity, factorSid, code } = event;
 
     const entity = client.verify.services(service).entities(identity);
-    const message = await checkToken(entity, factorSid, code);
+    const message = await verifyFactor(entity, factorSid, code);
+    const backupCodes = generateBackupCodes();
 
     response.setStatusCode(200);
     response.setBody({
       ok: true,
+      backupCodes,
       message,
     });
     return callback(null, response);

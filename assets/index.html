@@ -55,6 +55,10 @@
         font-weight: bold;
         text-transform: uppercase;
       }
+
+      #backup-codes {
+        font-family: monospace;
+      }
     </style>
   </head>
   <body>
@@ -128,11 +132,6 @@
               <input type="submit" value="Set up two-factor authentication" />
             </div>
           </form>
-          <form id="start-challenge" style="display: none">
-            <div>
-              <input type="submit" value="Validate authenticator app token" />
-            </div>
-          </form>
           <div>
             <span id="status"></span>
           </div>
@@ -143,6 +142,23 @@
               <span id="secret"></span>
             </div>
           </div>
+          <div id="backup" style="display: none">
+            <div>
+              <p>
+                <strong>Backup codes</strong>
+              </p>
+              <p>
+                Important! Print or save these codes in a safe place to prevent
+                account lockout.
+              </p>
+              <ul id="backup-codes"></ul>
+            </div>
+          </div>
+          <form id="start-challenge" style="display: none">
+            <div>
+              <input type="submit" value="Validate authenticator app token" />
+            </div>
+          </form>
           <form id="otp" style="display: none">
             <div>
               <label for="code"
@@ -157,7 +173,7 @@
         </section>
         <section>
           <div class="explainer" id="ex-new-factor">
-            <h4>What's happening here:</h4>
+            <h4>Create a New Factor | What's happening here:</h4>
             <p>
               The API is
               <strong
@@ -182,7 +198,7 @@
             </p>
           </div>
           <div class="explainer" id="ex-verify-factor">
-            <h4>What's happening here:</h4>
+            <h4>Verify a Factor | What's happening here:</h4>
             <p>
               Before you can use this channel for ongoing authentication, the
               user must <strong>verify the Factor</strong> to ensure that setup
@@ -199,8 +215,29 @@
               after being created.
             </p>
           </div>
+          <div class="explainer" id="ex-backup-codes">
+            <h4>Backup Codes | What's happening here:</h4>
+            <p>
+              Backup codes are commonly used as an
+              <strong>account recovery factor</strong> in combination with TOTP.
+              We generate them for the user here after the TOTP Factor is
+              verified. That way, if the user loses access to their
+              authenticator app, they have a trusted fallback option for
+              authentication.
+            </p>
+            <p>
+              Backup codes are another
+              <a href="https://www.twilio.com/docs/verify/api">
+                feature of the Twilio Verify API.
+              </a>
+            </p>
+            <p>
+              Alternatively, you could register another channel like SMS for
+              backup.
+            </p>
+          </div>
           <div class="explainer" id="ex-ongoing-auth">
-            <h4>What's happening here:</h4>
+            <h4>Ongoing Authentication | What's happening here:</h4>
             <p>
               After the Factor has been verified you can collect a token from
               the user at any time for <strong>ongoing authentication</strong>.
@@ -228,29 +265,39 @@
     </footer>
   </body>
   <script>
-    function showError(error) {
-      console.error(error);
-      showStatus(error, (color = "#a94442"));
+    function hide(element) {
+      element.style.display = "none";
     }
 
     function hideExplainers() {
       Array.from(document.getElementsByClassName("explainer")).forEach(
         (explainer) => {
-          explainer.style.display = "none";
+          hide(explainer);
         }
       );
     }
 
     function showExplainer(name) {
       hideExplainers();
-      const explainer = document.getElementById(name);
-      explainer.style.display = "block";
+      document.getElementById(name).style.display = "block";
+    }
+
+    function clearStatus() {
+      hideExplainers();
+      hide(document.getElementById("backup"));
+      document.getElementById("status").textContent = "";
     }
 
     function showStatus(message, color = "gray") {
+      clearStatus();
       let status = document.getElementById("status");
       status.style.color = color;
       status.textContent = message;
+    }
+
+    function showError(error) {
+      console.error(error);
+      showStatus(error, (color = "#a94442"));
     }
 
     function showQRCode(uri, secret) {
@@ -259,13 +306,33 @@
       document.getElementById("secret").innerHTML = secret;
       QRCode.toCanvas(document.getElementById("canvas"), uri, function (error) {
         if (error) showError(error);
-        showOtpForm();
+        showOtpForm(verifyFactor);
       });
     }
 
-    function showOtpForm() {
-      document.getElementById("create-factor").style.display = "none";
-      document.getElementById("otp").style.display = "block";
+    function showOtpForm(submitFn) {
+      const otp = document.getElementById("otp");
+      otp.addEventListener("submit", submitFn);
+      otp.style.display = "block";
+      hide(document.getElementById("create-factor"));
+    }
+
+    function hideOtpForm() {
+      const otp = document.getElementById("otp");
+      otp.removeEventListener("submit", verifyFactor);
+      otp.removeEventListener("submit", checkToken);
+      hide(otp);
+    }
+
+    function showBackupCodes(backupCodes) {
+      showExplainer("ex-backup-codes");
+      document.getElementById("backup").style.display = "block";
+      const codeList = document.getElementById("backup-codes");
+      backupCodes.forEach((code) => {
+        var li = document.createElement("li");
+        li.appendChild(document.createTextNode(code));
+        codeList.appendChild(li);
+      });
     }
 
     var identity;
@@ -285,8 +352,7 @@
       })
         .then((response) => {
           if (response.status >= 400) {
-            clearStatus();
-            document.getElementById("otp").style.display = "none";
+            hideOtpForm();
             document.getElementById("create-factor").style.display = "flex";
 
             return response.json().then(({ message }) => {
@@ -300,8 +366,9 @@
                 console.log(
                   `Created TOTP factor '${factorSid}' for identity ${identity}`
                 );
-                showQRCode(json.uri, json.secret);
+
                 showStatus(json.message);
+                showQRCode(json.uri, json.secret);
               } else {
                 showError(json.message);
               }
@@ -313,14 +380,8 @@
         });
     }
 
-    function clearStatus() {
-      hideExplainers();
-      document.getElementById("status").textContent = "";
-    }
-
-    function validateToken(event) {
+    function parseTokenData() {
       event.preventDefault();
-      clearStatus();
       const code = document.getElementById("code").value;
       showStatus(`Checking code ${code}...`);
 
@@ -328,6 +389,40 @@
       data.append("identity", identity);
       data.append("factorSid", factorSid);
       data.append("code", code);
+      return data;
+    }
+
+    function verifyFactor(event) {
+      const data = parseTokenData();
+
+      fetch("./verify-new-factor", {
+        method: "POST",
+        body: data,
+      })
+        .then((response) => {
+          return response.json();
+        })
+        .then((json) => {
+          if (json.ok) {
+            showStatus(json.message, (color = "#3c763d"));
+
+            hideOtpForm();
+            hide(document.getElementById("factor-setup"));
+
+            showBackupCodes(json.backupCodes);
+            document.getElementById("start-challenge").style.display = "flex";
+          } else {
+            showError(json.message);
+          }
+          document.getElementById("code").value = "";
+        })
+        .catch((error) => {
+          showError(error);
+        });
+    }
+
+    function checkToken(event) {
+      const data = parseTokenData();
 
       fetch("./check-token", {
         method: "POST",
@@ -339,8 +434,7 @@
         .then((json) => {
           if (json.ok) {
             clearStatus();
-            document.getElementById("otp").style.display = "none";
-            document.getElementById("factor-setup").style.display = "none";
+            hideOtpForm();
             showStatus(json.message, (color = "#3c763d"));
             document.getElementById("start-challenge").style.display = "flex";
           } else {
@@ -355,20 +449,18 @@
 
     function startChallenge(event) {
       event.preventDefault();
-      document.getElementById("start-challenge").style.display = "none";
+      hide(document.getElementById("start-challenge"));
       clearStatus();
       showExplainer("ex-ongoing-auth");
-      showOtpForm();
+      showOtpForm(checkToken);
     }
 
     showExplainer("ex-new-factor");
-
     document
       .getElementById("create-factor")
       .addEventListener("submit", createFactor);
     document
       .getElementById("start-challenge")
       .addEventListener("submit", startChallenge);
-    document.getElementById("otp").addEventListener("submit", validateToken);
   </script>
 </html>
