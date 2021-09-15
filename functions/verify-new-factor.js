@@ -11,7 +11,7 @@ const { detectMissingParams, VerificationException } = require(assets[
   "/utils.js"
 ].path);
 
-function generateBackupCodes() {
+async function generateBackupCodes() {
   // PLACEHOLDER DO NOT USE IN PRODUCTION
   const backupCodes = [
     "6163346800",
@@ -26,7 +26,7 @@ function generateBackupCodes() {
     "1688079534",
   ];
 
-  return backupCodes;
+  return Promise.resolve(backupCodes);
 }
 
 async function verifyFactor(entity, factorSid, code) {
@@ -72,7 +72,7 @@ exports.handler = async function (context, event, callback) {
 
     const entity = client.verify.services(service).entities(identity);
     const message = await verifyFactor(entity, factorSid, code);
-    const backupCodes = generateBackupCodes();
+    const backupCodes = await generateBackupCodes(entity);
 
     response.setStatusCode(200);
     response.setBody({
