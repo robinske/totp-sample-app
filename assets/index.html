@@ -400,7 +400,7 @@
       }
     }
 
-    function parseTokenData() {
+    function parseTokenData(event) {
       event.preventDefault();
       const code = document.getElementById("code").value;
       showStatus(`Checking code ${code}...`);
@@ -412,37 +412,36 @@
       return data;
     }
 
-    function verifyFactor(event) {
-      const data = parseTokenData();
+    async function verifyFactor(event) {
+      const data = parseTokenData(event);
+      document.getElementById("code").value = "";
 
-      fetch("./verify-new-factor", {
-        method: "POST",
-        body: data,
-      })
-        .then((response) => {
-          return response.json();
-        })
-        .then((json) => {
-          if (json.ok) {
-            showStatus(json.message, (color = "#3c763d"));
-            showSessionData();
-
-            hideOtpForm();
-            hide(document.getElementById("factor-setup"));
-
-            showBackupCodes(json.backupCodes);
-          } else {
-            showError(json.message);
-          }
-          document.getElementById("code").value = "";
-        })
-        .catch((error) => {
-          showError(error);
+      try {
+        let response = await fetch("./verify-new-factor", {
+          method: "POST",
+          body: data,
         });
+
+        let json = await response.json();
+
+        if (json.ok) {
+          showStatus(json.message, (color = "#3c763d"));
+          showSessionData();
+
+          hideOtpForm();
+          hide(document.getElementById("factor-setup"));
+
+          showBackupCodes(json.backupCodes);
+        } else {
+          throw new Error(json.message);
+        }
+      } catch (error) {
+        showError(error);
+      }
     }
 
     function checkToken(event) {
-      const data = parseTokenData();
+      const data = parseTokenData(event);
 
       fetch("./check-token", {
         method: "POST",
