@@ -14,52 +14,8 @@
       rel="stylesheet"
       href="https://twilio-labs.github.io/function-templates/static/v1/ce-paste-theme.css"
     />
+    <link rel="stylesheet" href="styles.css" />
     <script src="/qrcode.min.js"></script>
-    <style>
-      main {
-        padding-top: 40px;
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-        justify-content: flex-start;
-        width: 75%;
-        margin-left: auto;
-        margin-right: auto;
-      }
-
-      div.content {
-        max-width: 100%;
-      }
-
-      input[type="submit"] {
-        font: inherit;
-        border: 1px solid rgb(136, 145, 170);
-        border-radius: 4px;
-      }
-
-      .explainer {
-        color: #0c5460;
-        background-color: #d1ecf1;
-        border-color: #bee5eb;
-        padding: 0.75rem 1.25rem;
-        margin-top: 1rem;
-        border: 1px solid transparent;
-        border-radius: 0.25rem;
-      }
-
-      .reset {
-        margin-top: 1rem;
-      }
-
-      #secret {
-        font-weight: bold;
-        text-transform: uppercase;
-      }
-
-      #backup-codes {
-        font-family: monospace;
-      }
-    </style>
   </head>
   <body>
     <div class="page-top">
@@ -269,238 +225,182 @@
     <footer>
       <span>We can't wait to see what you build.</span>
     </footer>
-  </body>
-  <script>
-    document.getElementById("session-reset").addEventListener("click", reset);
-    function reset(event) {
-      event.preventDefault();
-      window.location.reload(false);
-      document.getElementById("session-data").textContent = "";
-      hide(document.getElementById("validate-code"));
-      sessionStorage.removeItem("name");
-      sessionStorage.removeItem("identity");
-      sessionStorage.removeItem("factorSid");
-    }
+    <script src="/helpers.js"></script>
+    <script>
+      function showQRCode(uri, secret) {
+        document.getElementById("factor-setup").style.display = "flex";
+        showExplainer("ex-verify-factor");
+        document.getElementById("secret").innerHTML = secret;
+        QRCode.toCanvas(
+          document.getElementById("canvas"),
+          uri,
+          function (error) {
+            if (error) showError(error);
+            showOtpForm(verifyFactor);
+          }
+        );
+      }
 
-    function hide(element) {
-      element.style.display = "none";
-    }
+      function hideOtpForm() {
+        const otp = document.getElementById("otp");
+        otp.removeEventListener("submit", verifyFactor);
+        otp.removeEventListener("submit", checkToken);
+        hide(otp);
+      }
 
-    function hideExplainers() {
-      Array.from(document.getElementsByClassName("explainer")).forEach(
-        (explainer) => {
-          hide(explainer);
-        }
-      );
-    }
+      function showOtpForm(submitFn) {
+        const otp = document.getElementById("otp");
+        otp.addEventListener("submit", submitFn);
+        otp.style.display = "block";
+        hide(document.getElementById("create-factor"));
+      }
 
-    function showExplainer(name) {
-      hideExplainers();
-      document.getElementById(name).style.display = "block";
-    }
+      function showBackupCodes(backupCodes) {
+        showExplainer("ex-backup-codes");
+        document.getElementById("backup").style.display = "block";
+        document
+          .getElementById("confirm-backup-codes")
+          .addEventListener("submit", confirmBackupCodes);
 
-    function clearStatus() {
-      hideExplainers();
-      hide(document.getElementById("backup"));
-      document.getElementById("status").textContent = "";
-    }
-
-    function showStatus(message, color = "gray") {
-      clearStatus();
-      let status = document.getElementById("status");
-      status.style.color = color;
-      status.textContent = message;
-    }
-
-    function showError(error) {
-      console.error(error);
-      showStatus(error, (color = "#a94442"));
-    }
-
-    function showQRCode(uri, secret) {
-      document.getElementById("factor-setup").style.display = "flex";
-      showExplainer("ex-verify-factor");
-      document.getElementById("secret").innerHTML = secret;
-      QRCode.toCanvas(document.getElementById("canvas"), uri, function (error) {
-        if (error) showError(error);
-        showOtpForm(verifyFactor);
-      });
-    }
-
-    function hideOtpForm() {
-      const otp = document.getElementById("otp");
-      otp.removeEventListener("submit", verifyFactor);
-      otp.removeEventListener("submit", checkToken);
-      hide(otp);
-    }
-
-    function showOtpForm(submitFn) {
-      const otp = document.getElementById("otp");
-      otp.addEventListener("submit", submitFn);
-      otp.style.display = "block";
-      hide(document.getElementById("create-factor"));
-    }
-
-    function showBackupCodes(backupCodes) {
-      showExplainer("ex-backup-codes");
-      document.getElementById("backup").style.display = "block";
-      document
-        .getElementById("confirm-backup-codes")
-        .addEventListener("submit", confirmBackupCodes);
-
-      const codeList = document.getElementById("backup-codes");
-      backupCodes.forEach((code) => {
-        var li = document.createElement("li");
-        li.appendChild(document.createTextNode(code));
-        codeList.appendChild(li);
-      });
-    }
-
-    function confirmBackupCodes(event) {
-      event.preventDefault();
-      showStatus("Factor setup complete!", (color = "#3c763d"));
-      hide(document.getElementById("backup"));
-      document.getElementById("start-challenge").style.display = "flex";
-    }
-
-    async function createFactor(event) {
-      event.preventDefault();
-      showStatus("Creating a QR code...");
-
-      const name = document.getElementById("name").value;
-      sessionStorage.setItem("name", name);
-
-      const data = new URLSearchParams();
-      data.append("name", name);
-
-      try {
-        let response = await fetch("./create-factor", {
-          method: "POST",
-          body: data,
+        const codeList = document.getElementById("backup-codes");
+        backupCodes.forEach((code) => {
+          var li = document.createElement("li");
+          li.appendChild(document.createTextNode(code));
+          codeList.appendChild(li);
         });
+      }
 
-        let json = await response.json();
+      function confirmBackupCodes(event) {
+        event.preventDefault();
+        showStatus("Factor setup complete!", (color = "#3c763d"));
+        hide(document.getElementById("backup"));
+        document.getElementById("start-challenge").style.display = "flex";
+      }
 
-        if (response.status >= 400) {
-          hideOtpForm();
-          document.getElementById("create-factor").style.display = "flex";
-          throw new Error(json.message);
-        } else {
+      async function createFactor(event) {
+        event.preventDefault();
+        showStatus("Creating a QR code...");
+
+        const name = document.getElementById("name").value;
+        sessionStorage.setItem("name", name);
+
+        const data = new URLSearchParams();
+        data.append("name", name);
+
+        try {
+          let response = await fetch("./create-factor", {
+            method: "POST",
+            body: data,
+          });
+
+          let json = await response.json();
+
+          if (response.status >= 400) {
+            hideOtpForm();
+            document.getElementById("create-factor").style.display = "flex";
+            throw new Error(json.message);
+          } else {
+            if (json.ok) {
+              sessionStorage.setItem("identity", json.identity);
+              sessionStorage.setItem("factorSid", json.factorSid);
+              showStatus(json.message);
+              showQRCode(json.uri, json.secret);
+            } else {
+              throw new Error(json.message);
+            }
+          }
+        } catch {
+          showError(`Something went wrong.`);
+        }
+      }
+
+      function parseTokenData(event) {
+        event.preventDefault();
+        const code = document.getElementById("code").value;
+        showStatus(`Checking code ${code}...`);
+
+        const data = new URLSearchParams();
+        data.append("identity", sessionStorage.getItem("identity"));
+        data.append("factorSid", sessionStorage.getItem("factorSid"));
+        data.append("code", code);
+        return data;
+      }
+
+      async function verifyFactor(event) {
+        const data = parseTokenData(event);
+        document.getElementById("code").value = "";
+
+        try {
+          let response = await fetch("./verify-new-factor", {
+            method: "POST",
+            body: data,
+          });
+
+          let json = await response.json();
+
           if (json.ok) {
-            sessionStorage.setItem("identity", json.identity);
-            sessionStorage.setItem("factorSid", json.factorSid);
-            showStatus(json.message);
-            showQRCode(json.uri, json.secret);
+            showStatus(json.message, (color = "#3c763d"));
+            showSessionData();
+
+            hideOtpForm();
+            hide(document.getElementById("factor-setup"));
+
+            showBackupCodes(json.backupCodes);
           } else {
             throw new Error(json.message);
           }
+        } catch (error) {
+          showError(error);
         }
-      } catch {
-        showError(`Something went wrong.`);
       }
-    }
 
-    function parseTokenData(event) {
-      event.preventDefault();
-      const code = document.getElementById("code").value;
-      showStatus(`Checking code ${code}...`);
+      function checkToken(event) {
+        const data = parseTokenData(event);
 
-      const data = new URLSearchParams();
-      data.append("identity", sessionStorage.getItem("identity"));
-      data.append("factorSid", sessionStorage.getItem("factorSid"));
-      data.append("code", code);
-      return data;
-    }
-
-    async function verifyFactor(event) {
-      const data = parseTokenData(event);
-      document.getElementById("code").value = "";
-
-      try {
-        let response = await fetch("./verify-new-factor", {
+        fetch("./check-token", {
           method: "POST",
           body: data,
-        });
-
-        let json = await response.json();
-
-        if (json.ok) {
-          showStatus(json.message, (color = "#3c763d"));
-          showSessionData();
-
-          hideOtpForm();
-          hide(document.getElementById("factor-setup"));
-
-          showBackupCodes(json.backupCodes);
-        } else {
-          throw new Error(json.message);
-        }
-      } catch (error) {
-        showError(error);
-      }
-    }
-
-    function checkToken(event) {
-      const data = parseTokenData(event);
-
-      fetch("./check-token", {
-        method: "POST",
-        body: data,
-      })
-        .then((response) => {
-          return response.json();
         })
-        .then((json) => {
-          if (json.ok) {
-            clearStatus();
-            hideOtpForm();
-            showStatus(json.message, (color = "#3c763d"));
-            document.getElementById("start-challenge").style.display = "flex";
-          } else {
-            showError(json.message);
-          }
-          document.getElementById("code").value = "";
-        })
-        .catch((error) => {
-          showError(error);
-        });
-    }
-
-    document
-      .getElementById("validate-code")
-      .addEventListener("click", startChallenge);
-
-    function startChallenge(event) {
-      event.preventDefault();
-      clearStatus();
-      hide(document.getElementById("start-challenge"));
-      hide(document.getElementById("create-factor"));
-
-      showExplainer("ex-ongoing-auth");
-      showOtpForm(checkToken);
-    }
-
-    function showSessionData() {
-      const identity = sessionStorage.getItem("identity");
-      const friendlyName = sessionStorage.getItem("name");
-
-      if (identity !== null) {
-        document.getElementById(
-          "session-data"
-        ).textContent = `Demo is running for username '${friendlyName}' with identity '${identity}'.`;
-        document.getElementById("validate-code").style.display = "inline";
-      } else {
-        hide(document.getElementById("validate-code"));
+          .then((response) => {
+            return response.json();
+          })
+          .then((json) => {
+            if (json.ok) {
+              clearStatus();
+              hideOtpForm();
+              showStatus(json.message, (color = "#3c763d"));
+              document.getElementById("start-challenge").style.display = "flex";
+            } else {
+              showError(json.message);
+            }
+            document.getElementById("code").value = "";
+          })
+          .catch((error) => {
+            showError(error);
+          });
       }
-    }
 
-    showExplainer("ex-new-factor");
-    showSessionData();
-    document
-      .getElementById("create-factor")
-      .addEventListener("submit", (event) => createFactor(event));
-    document
-      .getElementById("start-challenge")
-      .addEventListener("submit", startChallenge);
-  </script>
+      document
+        .getElementById("validate-code")
+        .addEventListener("click", startChallenge);
+
+      function startChallenge(event) {
+        event.preventDefault();
+        clearStatus();
+        hide(document.getElementById("start-challenge"));
+        hide(document.getElementById("create-factor"));
+
+        showExplainer("ex-ongoing-auth");
+        showOtpForm(checkToken);
+      }
+
+      showExplainer("ex-new-factor");
+      document
+        .getElementById("create-factor")
+        .addEventListener("submit", (event) => createFactor(event));
+      document
+        .getElementById("start-challenge")
+        .addEventListener("submit", startChallenge);
+    </script>
+  </body>
 </html>
