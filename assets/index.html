@@ -318,6 +318,7 @@
         event.preventDefault();
         const code = document.getElementById("code").value;
         showStatus(`Checking code ${code}...`);
+        document.getElementById("code").value = "";
 
         const data = new URLSearchParams();
         data.append("identity", sessionStorage.getItem("identity"));
@@ -328,7 +329,6 @@
 
       async function verifyFactor(event) {
         const data = parseTokenData(event);
-        document.getElementById("code").value = "";
 
         try {
           let response = await fetch("./verify-new-factor", {
@@ -354,30 +354,27 @@
         }
       }
 
-      function checkToken(event) {
+      async function checkToken(event) {
         const data = parseTokenData(event);
 
-        fetch("./check-token", {
-          method: "POST",
-          body: data,
-        })
-          .then((response) => {
-            return response.json();
-          })
-          .then((json) => {
-            if (json.ok) {
-              clearStatus();
-              hideOtpForm();
-              showStatus(json.message, (color = "#3c763d"));
-              document.getElementById("start-challenge").style.display = "flex";
-            } else {
-              showError(json.message);
-            }
-            document.getElementById("code").value = "";
-          })
-          .catch((error) => {
-            showError(error);
+        try {
+          let response = await fetch("./check-token", {
+            method: "POST",
+            body: data,
           });
+
+          let json = await response.json();
+          if (json.ok) {
+            clearStatus();
+            hideOtpForm();
+            showStatus(json.message, (color = "#3c763d"));
+            document.getElementById("start-challenge").style.display = "flex";
+          } else {
+            throw new Error(json.message);
+          }
+        } catch (error) {
+          showError(error);
+        }
       }
 
       document
