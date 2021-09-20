@@ -47,11 +47,6 @@ function showError(error) {
   showStatus(error, (color = "#a94442"));
 }
 
-function resetCodeInput() {
-  document.getElementById("verify-new-factor-code").value = "";
-  document.getElementById("create-challenge-totp-code").value = "";
-}
-
 function showSessionData() {
   const identity = sessionStorage.getItem("identity");
   const friendlyName = sessionStorage.getItem("name");

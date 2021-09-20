@@ -265,7 +265,6 @@
         event.preventDefault();
         const code = document.getElementById(codeId).value;
         showStatus(`Checking code ${code}...`);
-        code.value = "";
 
         const data = new URLSearchParams();
         data.append("identity", sessionStorage.getItem("identity"));
@@ -277,6 +276,7 @@
           body: data,
         });
 
+        document.getElementById(codeId).value = "";
         return response.json();
       }
 
@@ -312,7 +312,6 @@
           );
           if (json.ok) {
             startChallenge();
-            resetCodeInput();
             showStatus(json.message, (color = "#3c763d"));
           } else {
             throw new Error(json.message);
