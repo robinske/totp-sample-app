@@ -1,0 +1,20 @@
+{
+  "name": "totp-sample-app",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "twilio-run",
+    "deploy": "twilio-run deploy"
+  },
+  "dependencies": {
+    "twilio": "^3.67.2",
+    "uuid": "^8.3.2"
+  },
+  "devDependencies": {
+    "twilio-run": "^3.1.0"
+  },
+  "engines": {
+    "node": "12"
+  }
+}
