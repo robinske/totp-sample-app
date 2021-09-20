@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="x-ua-compatible" content="ie=edge" />
-    <title>Time-based One-Time Password authentication</title>
+    <title>Time-based One-Time Password authentication with backup codes</title>
 
     <link
       rel="icon"
@@ -98,6 +98,24 @@
               <span id="secret"></span>
             </div>
           </div>
+          <div id="backup" class="dynamic-render">
+            <div>
+              <p>
+                <strong>Backup codes</strong>
+              </p>
+              <p>
+                Important! If you lose access to your phone, you won't be able
+                to log in without one of these codes. Print or save these codes
+                in a safe place to prevent account lockout.
+              </p>
+              <ul id="backup-codes"></ul>
+            </div>
+            <form id="confirm-backup-codes">
+              <div>
+                <input type="submit" value="I saved the codes, I promise!" />
+              </div>
+            </form>
+          </div>
           <form id="verify-new-factor" class="otp-form">
             <div>
               <label for="verify-new-factor-code">
@@ -124,6 +142,22 @@
               <input
                 type="text"
                 id="create-challenge-totp-code"
+                placeholder="123456"
+              />
+              <input type="submit" value="Verify" />
+            </div>
+            <div id="start-backup">Or <a href="#">use a backup code</a></div>
+          </form>
+          <form id="create-challenge-backup" class="otp-form">
+            <div>
+              <label for="create-challenge-backup-code">
+                Enter a backup code:
+              </label>
+            </div>
+            <div>
+              <input
+                type="text"
+                id="create-challenge-backup-code"
                 placeholder="123456"
               />
               <input type="submit" value="Verify" />
@@ -174,6 +208,27 @@
               after being created.
             </p>
           </div>
+          <div class="explainer" id="ex-backup-codes">
+            <h4>Backup Codes | What's happening here:</h4>
+            <p>
+              Backup codes are commonly used as an
+              <strong>account recovery factor</strong> in combination with TOTP.
+              We generate them for the user here after the TOTP Factor is
+              verified. That way, if the user loses access to their
+              authenticator app, they have a trusted fallback option for
+              authentication.
+            </p>
+            <p>
+              Backup codes are another
+              <a href="https://www.twilio.com/docs/verify/api">
+                feature of the Twilio Verify API.
+              </a>
+            </p>
+            <p>
+              Alternatively, you could register another channel like SMS for
+              backup.
+            </p>
+          </div>
           <div class="explainer" id="ex-ongoing-auth">
             <h4>Ongoing Authentication | What's happening here:</h4>
             <p>
@@ -185,6 +240,19 @@
                 >create a challenge</a
               >
               with the token provided.
+            </p>
+          </div>
+          <div class="explainer" id="ex-backup-code-auth">
+            <h4>Backup Code Authentication | What's happening here:</h4>
+            <p>
+              If the user loses access to their phone, they can use a
+              <strong>backup code</strong> instead. On the backend, this will
+              <a
+                href="https://www.twilio.com/docs/verify/api/challenge?code-sample=code-create-totp-challenge-with-authpayload&code-language=Node.js&code-sdk-version=3.x"
+                >create a challenge</a
+              >
+              with the token provided, similar to ongoing authentication but
+              with a different Factor SID.
             </p>
           </div>
         </section>
@@ -222,11 +290,40 @@
         document.getElementById(formId).style.display = "block";
       }
 
+      function showBackupCodes(backupCodes) {
+        document.getElementById("backup").style.display = "block";
+        document
+          .getElementById("confirm-backup-codes")
+          .addEventListener("submit", confirmBackupCodes);
+
+        const codeList = document.getElementById("backup-codes");
+        backupCodes.forEach((code) => {
+          var li = document.createElement("li");
+          li.appendChild(document.createTextNode(code));
+          codeList.appendChild(li);
+        });
+        showExplainer("ex-backup-codes");
+      }
+
+      function confirmBackupCodes(event) {
+        event.preventDefault();
+
+        startChallenge();
+        showStatus("Factor setup complete!", (color = "#3c763d"));
+      }
+
       function startChallenge() {
         clearPage();
 
         showOtpForm("create-challenge-totp");
         showExplainer("ex-ongoing-auth");
+      }
+
+      function startBackup() {
+        clearPage();
+
+        showOtpForm("create-challenge-backup");
+        showExplainer("ex-backup-code-auth");
       }
 
       async function createFactor(event) {
@@ -291,9 +388,10 @@
 
           if (json.ok) {
             clearPage();
+            showStatus(json.message, (color = "#3c763d"));
             showSessionData();
-            startChallenge();
-            showStatus("Factor setup complete!", (color = "#3c763d"));
+            sessionStorage.setItem("backupFactorSid", json.backupFactorSid);
+            showBackupCodes(json.backupCodes);
           } else {
             throw new Error(json.message);
           }
@@ -335,6 +433,18 @@
         .addEventListener("submit", (event) =>
           createChallenge(event, "create-challenge-totp-code", "totpFactorSid")
         );
+      document
+        .getElementById("create-challenge-backup")
+        .addEventListener("submit", (event) =>
+          createChallenge(
+            event,
+            "create-challenge-backup-code",
+            "backupFactorSid"
+          )
+        );
+      document
+        .getElementById("start-backup")
+        .addEventListener("click", startBackup);
 
       // initial view
       document.getElementById("create-factor").style.display = "block";
