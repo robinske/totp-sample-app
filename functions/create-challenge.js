@@ -17,6 +17,7 @@ async function checkToken(entity, factorSid, code) {
   });
   if (challenge.status === "approved") {
     return "Verification success.";
+    // eslint-disable-next-line no-else-return
   } else {
     throw new VerificationException(
       401,

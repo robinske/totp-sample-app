@@ -1,19 +1,10 @@
-document
-  .getElementById("session-reset")
-  .addEventListener("click", resetSession);
-function resetSession(event) {
+document.getElementById("session-reset").addEventListener("click", (event) => {
   event.preventDefault();
   sessionStorage.removeItem("name");
   sessionStorage.removeItem("identity");
   sessionStorage.removeItem("totpFactorSid");
   window.location.reload(false);
-}
-
-function clearPage() {
-  clearStatus();
-  hideAll("dynamic-render");
-  hideAll("otp-form");
-}
+});
 
 function hide(element) {
   element.style.display = "none";
@@ -37,7 +28,7 @@ function clearStatus() {
 
 function showStatus(message, color = "gray") {
   clearStatus();
-  let status = document.getElementById("status");
+  const status = document.getElementById("status");
   status.style.color = color;
   status.textContent = message;
 }
@@ -51,14 +42,20 @@ function showSessionData() {
   const identity = sessionStorage.getItem("identity");
   const friendlyName = sessionStorage.getItem("name");
 
-  if (identity !== null) {
+  if (identity === null) {
+    hide(document.getElementById("validate-code"));
+  } else {
     document.getElementById(
       "session-data"
     ).textContent = `Demo is running for username '${friendlyName}' with identity '${identity}'.`;
     document.getElementById("validate-code").style.display = "inline";
-  } else {
-    hide(document.getElementById("validate-code"));
   }
 }
 
 showSessionData();
+
+function clearPage() {
+  clearStatus();
+  hideAll("dynamic-render");
+  hideAll("otp-form");
+}
